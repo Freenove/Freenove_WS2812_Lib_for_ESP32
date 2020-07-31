@@ -4,7 +4,7 @@
 #define LEDS_PIN	2
 #define CHANNEL		0
 
-Freenove_ESP32_WS2812 strip = Freenove_ESP32_WS2812(LEDS_COUNT, LEDS_PIN, CHANNEL);
+Freenove_ESP32_WS2812 strip = Freenove_ESP32_WS2812(LEDS_COUNT, LEDS_PIN, CHANNEL, TYPE_GRB);
 
 void setup() {
   strip.begin();
@@ -16,6 +16,6 @@ void loop() {
       strip.setLedColorData(i, strip.Wheel((i * 256 / LEDS_COUNT + j) & 255));
     }
     strip.show();
-    delay(2);
+    delay(5);
   }  
 }

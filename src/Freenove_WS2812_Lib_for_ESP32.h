@@ -53,16 +53,16 @@ enum LED_TYPE
 class Freenove_ESP32_WS2812
 {
 protected:
-	u8 I2C_Address;
-	u8 uartBaudrateIndex;
-	u8 commMode;
+	
 	u16 ledCounts;
 	u8 rmt_chn;
 	u8 pin;
-	u32 uartWaitAckTime;	//unit: us
+	u8 br;
+	
 	u8 rOffset;
 	u8 gOffset;
 	u8 bOffset;
+
 	rmt_config_t config;
 	led_strip_config_t strip_config;
 	led_strip_t *strip;
@@ -73,6 +73,7 @@ public:
 	bool begin();
 	void setLedCount(u16 n);
 	void setLedType(LED_TYPE t);
+	void setBrightness(u8 brightness);
 
 	esp_err_t setLedColorData(u8 index, u32 rgb);
 	esp_err_t setLedColorData(u8 index, u8 r, u8 g, u8 b);
@@ -89,6 +90,7 @@ public:
 	esp_err_t show();
 
 	uint32_t Wheel(byte pos);
+	uint32_t hsv2rgb(uint32_t h, uint32_t s, uint32_t v);
 };
 
 #endif
