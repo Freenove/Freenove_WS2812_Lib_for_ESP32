@@ -100,9 +100,9 @@ static esp_err_t ws2812_set_pixel(led_strip_t *strip, uint32_t index, uint32_t r
     ws2812_t *ws2812 = __containerof(strip, ws2812_t, parent);
     STRIP_CHECK(index < ws2812->strip_len, "index out of the maximum number of leds", err, ESP_ERR_INVALID_ARG);
     uint32_t start = index * 3;
-    // In thr order of GRB
-    ws2812->buffer[start + 0] = green & 0xFF;
-    ws2812->buffer[start + 1] = red & 0xFF;
+    // In thr order of RGB
+    ws2812->buffer[start + 1] = green & 0xFF;
+    ws2812->buffer[start + 0] = red & 0xFF;
     ws2812->buffer[start + 2] = blue & 0xFF;
     return ESP_OK;
 err:
