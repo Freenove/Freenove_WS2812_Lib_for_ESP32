@@ -35,19 +35,21 @@ enum LED_TYPE
 #define RMT_DEFAULT_CONFIG_TX(gpio, channel_id)      \
     {                                                \
         .rmt_mode = RMT_MODE_TX,                     \
-        .channel = channel_id,                       \
-        .gpio_num = gpio,                            \
-        .clk_div = 80,                               \
+        .channel = (rmt_channel_t)channel_id,        \
+        .clk_div = 2,                               \
+        .gpio_num = (gpio_num_t)gpio,                \
         .mem_block_num = 1,                          \
-		.tx_config = { \
-			.carrier_freq_hz = 38000,                \
-			.carrier_level = RMT_CARRIER_LEVEL_HIGH, \
-			.idle_level = RMT_IDLE_LEVEL_LOW,        \
-			.carrier_duty_percent = 33,              \
-			.carrier_en = false,                     \
-			.loop_en = false,                        \
-			.idle_output_en = true,                  \
-		}                                            \
+		{				\
+			.tx_config = { \
+				.loop_en = false,                        \
+				.carrier_freq_hz = 38000,                \
+				.carrier_duty_percent = 33,              \
+				.carrier_level = RMT_CARRIER_LEVEL_HIGH, \
+				.carrier_en = false,                     \
+				.idle_level = RMT_IDLE_LEVEL_LOW,        \
+				.idle_output_en = true,                  \
+			}\
+		},	\
     }
 
 class Freenove_ESP32_WS2812

@@ -22,28 +22,13 @@ Freenove_ESP32_WS2812::Freenove_ESP32_WS2812(u16 n /*= 8*/, u8 pin_gpio /*= 2*/,
 }
 
 bool Freenove_ESP32_WS2812::begin()
-{
-	//config = RMT_DEFAULT_CONFIG_TX(pin, rmt_chn);
-
-	config.rmt_mode = RMT_MODE_TX;
-	config.channel = (rmt_channel_t)rmt_chn;
-	config.gpio_num = (gpio_num_t)pin;
-	config.clk_div = 2;
-	config.mem_block_num = 1;
-
-	config.tx_config.carrier_freq_hz = 38000;
-	config.tx_config.carrier_level = RMT_CARRIER_LEVEL_HIGH;
-	config.tx_config.idle_level = RMT_IDLE_LEVEL_LOW;
-	config.tx_config.carrier_duty_percent = 33;
-	config.tx_config.carrier_en = false;
-	config.tx_config.loop_en = false;
-	config.tx_config.idle_output_en = true;
-
+{	
+	config = RMT_DEFAULT_CONFIG_TX(pin, rmt_chn);
 	rmt_config(&config);
 	rmt_driver_install(config.channel, 0, 0);
 
 	strip_config = LED_STRIP_DEFAULT_CONFIG(ledCounts, (led_strip_dev_t)config.channel);
-
+	
 	strip = led_strip_new_rmt_ws2812(&strip_config);
 	if (!strip) {
 		return false;
