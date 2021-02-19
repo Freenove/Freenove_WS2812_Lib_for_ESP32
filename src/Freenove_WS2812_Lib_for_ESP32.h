@@ -10,6 +10,7 @@
 #define _FREENOVE_WS2812_LIB_FOR_ESP32_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
+#include <Arduino.h>
 #else
 #include "WProgram.h"
 #endif
