@@ -54,12 +54,12 @@ void Freenove_ESP32_WS2812::setBrightness(u8 brightness)
 	br = constrain(brightness, 0, 255);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColorData(u8 index, u32 rgb)
+esp_err_t Freenove_ESP32_WS2812::setLedColorData(u16 index, u32 rgb)
 {
 	return setLedColorData(index, rgb >> 16, rgb >> 8, rgb);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColorData(u8 index, u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setLedColorData(u16 index, u8 r, u8 g, u8 b)
 {
 	u8 p[3];
 	p[rOffset] = r * br / 255;
@@ -68,12 +68,12 @@ esp_err_t Freenove_ESP32_WS2812::setLedColorData(u8 index, u8 r, u8 g, u8 b)
 	return strip->set_pixel(strip, index, p[0], p[1], p[2]);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColor(u8 index, u32 rgb)
+esp_err_t Freenove_ESP32_WS2812::setLedColor(u16 index, u32 rgb)
 {
 	return setLedColor(index, rgb >> 16, rgb >> 8, rgb);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColor(u8 index, u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setLedColor(u16 index, u8 r, u8 g, u8 b)
 {
 	setLedColorData(index, r, g, b);
 	return show();

@@ -77,11 +77,11 @@ public:
 	void setLedType(LED_TYPE t);
 	void setBrightness(u8 brightness);
 
-	esp_err_t setLedColorData(u8 index, u32 rgb);
-	esp_err_t setLedColorData(u8 index, u8 r, u8 g, u8 b);
+	esp_err_t setLedColorData(u16 index, u32 rgb);
+	esp_err_t setLedColorData(u16 index, u8 r, u8 g, u8 b);
 
-	esp_err_t setLedColor(u8 index, u32 rgb);
-	esp_err_t setLedColor(u8 index, u8 r, u8 g, u8 b);
+	esp_err_t setLedColor(u16 index, u32 rgb);
+	esp_err_t setLedColor(u16 index, u8 r, u8 g, u8 b);
 
 	esp_err_t setAllLedsColorData(u32 rgb);
 	esp_err_t setAllLedsColorData(u8 r, u8 g, u8 b);
