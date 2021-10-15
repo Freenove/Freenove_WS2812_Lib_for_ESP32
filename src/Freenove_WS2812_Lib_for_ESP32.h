@@ -1,9 +1,9 @@
 // Freenove_WS2812_Lib_for_ESP32.h
 /**
  * Brief	A library for controlling ws2812 in esp32 platform.
- * Author	SuhaylZhao
+ * Author	ZhentaoLin
  * Company	Freenove
- * Date		2020-07-31
+ * Date		2021-10-15
  */
 
 #ifndef _FREENOVE_WS2812_LIB_FOR_ESP32_h
@@ -15,12 +15,22 @@
 #include "WProgram.h"
 #endif
 
-#include "driver/rmt.h"
-#include "led_strip.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
+#include "Arduino.h"
+
+#include "esp32-hal.h"
 
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned long u32;
+
+//Modify the definition to expand the number of leds
+//Supports a maximum of 1100 leds
+#define NR_OF_LEDS   256  
+
+#define NR_OF_ALL_BITS 24*NR_OF_LEDS
 
 enum LED_TYPE
 {					  //R  G  B
@@ -32,42 +42,23 @@ enum LED_TYPE
 	TYPE_BGR = 0x24	  //10 01 00
 };
 
-#define RMT_DEFAULT_CONFIG_TX(gpio, channel_id)      \
-    {                                                \
-        .rmt_mode = RMT_MODE_TX,                     \
-        .channel = (rmt_channel_t)channel_id,        \
-        .clk_div = 2,                               \
-        .gpio_num = (gpio_num_t)gpio,                \
-        .mem_block_num = 1,                          \
-		{				\
-			.tx_config = { \
-				.loop_en = false,                        \
-				.carrier_freq_hz = 38000,                \
-				.carrier_duty_percent = 33,              \
-				.carrier_level = RMT_CARRIER_LEVEL_HIGH, \
-				.carrier_en = false,                     \
-				.idle_level = RMT_IDLE_LEVEL_LOW,        \
-				.idle_output_en = true,                  \
-			}\
-		},	\
-    }
-
 class Freenove_ESP32_WS2812
 {
 protected:
 	
 	u16 ledCounts;
-	u8 rmt_chn;
 	u8 pin;
 	u8 br;
+	u8 rmt_chn;
 	
 	u8 rOffset;
 	u8 gOffset;
 	u8 bOffset;
-
-	rmt_config_t config;
-	led_strip_config_t strip_config;
-	led_strip_t *strip;
+	
+	float realTick;
+	rmt_reserve_memsize_t rmt_mem;
+	rmt_data_t led_data[NR_OF_ALL_BITS];
+	rmt_obj_t* rmt_send = NULL;
 
 public:
 	Freenove_ESP32_WS2812(u16 n = 8, u8 pin_gpio = 2, u8 chn = 0, LED_TYPE t = TYPE_GRB);
@@ -77,11 +68,13 @@ public:
 	void setLedType(LED_TYPE t);
 	void setBrightness(u8 brightness);
 
-	esp_err_t setLedColorData(u16 index, u32 rgb);
-	esp_err_t setLedColorData(u16 index, u8 r, u8 g, u8 b);
+	esp_err_t set_pixel(int index, u8 r, u8 g, u8 b);
+	
+	esp_err_t setLedColorData(int index, u32 rgb);
+	esp_err_t setLedColorData(int index, u8 r, u8 g, u8 b);
 
-	esp_err_t setLedColor(u16 index, u32 rgb);
-	esp_err_t setLedColor(u16 index, u8 r, u8 g, u8 b);
+	esp_err_t setLedColor(int index, u32 rgb);
+	esp_err_t setLedColor(int index, u8 r, u8 g, u8 b);
 
 	esp_err_t setAllLedsColorData(u32 rgb);
 	esp_err_t setAllLedsColorData(u8 r, u8 g, u8 b);

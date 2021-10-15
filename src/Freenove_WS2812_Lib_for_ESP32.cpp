@@ -3,36 +3,58 @@
 // 
 /**
  * Brief	A library for controlling ws2812 in esp32 platform.
- * Author	SuhaylZhao
+ * Author	ZhentaoLin
  * Company	Freenove
- * Date		2020-07-31
+ * Date		2021-10-15
  */
 
-
 #include "Freenove_WS2812_Lib_for_ESP32.h"
-
 
 Freenove_ESP32_WS2812::Freenove_ESP32_WS2812(u16 n /*= 8*/, u8 pin_gpio /*= 2*/, u8 chn /*= 0*/, LED_TYPE t /*= TYPE_GRB*/)
 {
 	ledCounts = n;
 	pin = pin_gpio;
 	rmt_chn = chn;
+	rmt_mem = RMT_MEM_64;
 	br = 255;
 	setLedType(t);
 }
 
 bool Freenove_ESP32_WS2812::begin()
 {	
-	config = RMT_DEFAULT_CONFIG_TX(pin, rmt_chn);
-	rmt_config(&config);
-	rmt_driver_install(config.channel, 0, 0);
-
-	strip_config = LED_STRIP_DEFAULT_CONFIG(ledCounts, (led_strip_dev_t)config.channel);
-	
-	strip = led_strip_new_rmt_ws2812(&strip_config);
-	if (!strip) {
+	switch(rmt_chn){
+		case 0:
+			rmt_mem=RMT_MEM_64;break;
+		case 1:
+			rmt_mem=RMT_MEM_128;break;
+		case 2:
+			rmt_mem=RMT_MEM_192;break;
+		case 3:
+			rmt_mem=RMT_MEM_256;break;
+		case 4:
+			rmt_mem=RMT_MEM_320;break;
+		case 5:
+			rmt_mem=RMT_MEM_384;break;
+		case 6:
+			rmt_mem=RMT_MEM_448;break;
+		case 7:
+			rmt_mem=RMT_MEM_512;break;		
+		default:
+			rmt_mem=RMT_MEM_64;break;
+	}
+	if ((rmt_send = rmtInit(pin, true, rmt_mem)) == NULL){
 		return false;
 	}
+	for(int i=0;i<ledCounts;i++)
+	{
+		for (int bit = 0; bit < 24; bit++) {
+			led_data[i*24+bit].level0 = 1;
+			led_data[i*24+bit].duration0 = 4;
+			led_data[i*24+bit].level1 = 0;
+			led_data[i*24+bit].duration1 = 8;
+		}
+	}
+	realTick = rmtSetTick(rmt_send, 100);
 	return true;
 }
 
@@ -54,26 +76,45 @@ void Freenove_ESP32_WS2812::setBrightness(u8 brightness)
 	br = constrain(brightness, 0, 255);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColorData(u16 index, u32 rgb)
+esp_err_t Freenove_ESP32_WS2812::setLedColorData(int index, u32 rgb)
 {
 	return setLedColorData(index, rgb >> 16, rgb >> 8, rgb);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColorData(u16 index, u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setLedColorData(int index, u8 r, u8 g, u8 b)
 {
 	u8 p[3];
 	p[rOffset] = r * br / 255;
 	p[gOffset] = g * br / 255;
 	p[bOffset] = b * br / 255;
-	return strip->set_pixel(strip, index, p[0], p[1], p[2]);
+	return set_pixel(index, p[0], p[1], p[2]);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColor(u16 index, u32 rgb)
+esp_err_t Freenove_ESP32_WS2812::set_pixel(int index, u8 r, u8 g, u8 b)
+{
+	u32 color = r << 16 | g << 8 | b ;
+	for (int bit = 0; bit < 24; bit++) {
+		if (color & (1 << (23-bit))) {
+			led_data[index*24+bit].level0 = 1;
+			led_data[index*24+bit].duration0 = 8;
+			led_data[index*24+bit].level1 = 0;
+			led_data[index*24+bit].duration1 = 4;
+		} else {
+			led_data[index*24+bit].level0 = 1;
+			led_data[index*24+bit].duration0 = 4;
+			led_data[index*24+bit].level1 = 0;
+			led_data[index*24+bit].duration1 = 8;
+		}
+	}
+	return ESP_OK;
+}
+
+esp_err_t Freenove_ESP32_WS2812::setLedColor(int index, u32 rgb)
 {
 	return setLedColor(index, rgb >> 16, rgb >> 8, rgb);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColor(u16 index, u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setLedColor(int index, u8 r, u8 g, u8 b)
 {
 	setLedColorData(index, r, g, b);
 	return show();
@@ -113,7 +154,7 @@ esp_err_t Freenove_ESP32_WS2812::setAllLedsColor(u8 r, u8 g, u8 b)
 
 esp_err_t Freenove_ESP32_WS2812::show()
 {
-	return strip->refresh(strip, 100);
+	return rmtWrite(rmt_send, led_data, ledCounts*24);
 }
 
 uint32_t Freenove_ESP32_WS2812::Wheel(byte pos)
