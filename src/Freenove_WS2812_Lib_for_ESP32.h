@@ -11,26 +11,15 @@
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include <Arduino.h>
-#else
-#include "WProgram.h"
 #endif
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "Arduino.h"
+#include <stdint.h>
 
 #include "esp32-hal.h"
-
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned long u32;
-
-//Modify the definition to expand the number of leds
-//Supports a maximum of 1100 leds
-#define NR_OF_LEDS   256  
-
-#define NR_OF_ALL_BITS 24*NR_OF_LEDS
 
 enum LED_TYPE
 {					  //R  G  B
@@ -46,41 +35,48 @@ class Freenove_ESP32_WS2812
 {
 protected:
 	
-	u16 ledCounts;
-	u8 pin;
-	u8 br;
-	u8 rmt_chn;
+	uint16_t ledCounts;
+	uint8_t pin;
+	uint8_t br;
+	uint8_t rmt_chn;
 	
-	u8 rOffset;
-	u8 gOffset;
-	u8 bOffset;
+	uint8_t rOffset;
+	uint8_t gOffset;
+	uint8_t bOffset;
 	
 	float realTick;
 	rmt_reserve_memsize_t rmt_mem;
-	rmt_data_t led_data[NR_OF_ALL_BITS];
+	rmt_data_t *led_data;
 	rmt_obj_t* rmt_send = NULL;
 
 public:
-	Freenove_ESP32_WS2812(u16 n = 8, u8 pin_gpio = 2, u8 chn = 0, LED_TYPE t = TYPE_GRB);
+	Freenove_ESP32_WS2812(uint16_t n = 8, 
+	uint8_t pin_gpio = 2,
+	 uint8_t chn = 0,
+	  LED_TYPE t = TYPE_GRB);
+
+    ~Freenove_ESP32_WS2812();
+
+    esp_err_t  random();
 
 	bool begin();
-	void setLedCount(u16 n);
+	void setLedCount(uint16_t n);
 	void setLedType(LED_TYPE t);
-	void setBrightness(u8 brightness);
+	void setBrightness(uint8_t brightness);
 
-	esp_err_t set_pixel(int index, u8 r, u8 g, u8 b);
+	esp_err_t set_pixel(int index, uint8_t r, uint8_t g, uint8_t b);
 	
-	esp_err_t setLedColorData(int index, u32 rgb);
-	esp_err_t setLedColorData(int index, u8 r, u8 g, u8 b);
+	esp_err_t setLedColorData(int index, uint32_t rgb);
+	esp_err_t setLedColorData(int index, uint8_t r, uint8_t g, uint8_t b);
 
-	esp_err_t setLedColor(int index, u32 rgb);
-	esp_err_t setLedColor(int index, u8 r, u8 g, u8 b);
+	esp_err_t setLedColor(int index, uint32_t rgb);
+	esp_err_t setLedColor(int index, uint8_t r, uint8_t g, uint8_t b);
 
-	esp_err_t setAllLedsColorData(u32 rgb);
-	esp_err_t setAllLedsColorData(u8 r, u8 g, u8 b);
+	esp_err_t setAllLedsColorData(uint32_t rgb);
+	esp_err_t setAllLedsColorData(uint8_t r, uint8_t g, uint8_t b);
 
-	esp_err_t setAllLedsColor(u32 rgb);
-	esp_err_t setAllLedsColor(u8 r, u8 g, u8 b);
+	esp_err_t setAllLedsColor(uint32_t rgb);
+	esp_err_t setAllLedsColor(uint8_t r, uint8_t g, uint8_t b);
 
 	esp_err_t show();
 

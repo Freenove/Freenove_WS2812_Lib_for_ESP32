@@ -9,15 +9,23 @@
  */
 
 #include "Freenove_WS2812_Lib_for_ESP32.h"
+#include <Arduino.h>
 
-Freenove_ESP32_WS2812::Freenove_ESP32_WS2812(u16 n /*= 8*/, u8 pin_gpio /*= 2*/, u8 chn /*= 0*/, LED_TYPE t /*= TYPE_GRB*/)
+Freenove_ESP32_WS2812::Freenove_ESP32_WS2812(uint16_t  n /*= 8*/, uint8_t  pin_gpio /*= 2*/, uint8_t  chn /*= 0*/, LED_TYPE t /*= TYPE_GRB*/)
 {
+    led_data = new rmt_data_t[24*n];
 	ledCounts = n;
 	pin = pin_gpio;
 	rmt_chn = chn;
 	rmt_mem = RMT_MEM_64;
 	br = 255;
 	setLedType(t);
+}
+
+Freenove_ESP32_WS2812::~Freenove_ESP32_WS2812()
+{
+	delete led_data;
+	led_data = NULL;
 }
 
 bool Freenove_ESP32_WS2812::begin()
@@ -58,7 +66,7 @@ bool Freenove_ESP32_WS2812::begin()
 	return true;
 }
 
-void Freenove_ESP32_WS2812::setLedCount(u16 n)
+void Freenove_ESP32_WS2812::setLedCount(uint16_t  n)
 {
 	ledCounts = n;
 	begin();
@@ -71,28 +79,29 @@ void Freenove_ESP32_WS2812::setLedType(LED_TYPE t)
 	bOffset = t & 0x03;
 }
 
-void Freenove_ESP32_WS2812::setBrightness(u8 brightness)
+void Freenove_ESP32_WS2812::setBrightness(uint8_t  brightness)
 {
 	br = constrain(brightness, 0, 255);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColorData(int index, u32 rgb)
+esp_err_t Freenove_ESP32_WS2812::setLedColorData(int index, uint32_t  rgb)
 {
 	return setLedColorData(index, rgb >> 16, rgb >> 8, rgb);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColorData(int index, u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setLedColorData(int index, uint8_t  r, uint8_t  g, uint8_t  b)
 {
-	u8 p[3];
+	uint8_t  p[3];
 	p[rOffset] = r * br / 255;
 	p[gOffset] = g * br / 255;
 	p[bOffset] = b * br / 255;
+
 	return set_pixel(index, p[0], p[1], p[2]);
 }
 
-esp_err_t Freenove_ESP32_WS2812::set_pixel(int index, u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::set_pixel(int index, uint8_t  r, uint8_t  g, uint8_t  b)
 {
-	u32 color = r << 16 | g << 8 | b ;
+	uint32_t  color = r << 16 | g << 8 | b ;
 	for (int bit = 0; bit < 24; bit++) {
 		if (color & (1 << (23-bit))) {
 			led_data[index*24+bit].level0 = 1;
@@ -109,18 +118,27 @@ esp_err_t Freenove_ESP32_WS2812::set_pixel(int index, u8 r, u8 g, u8 b)
 	return ESP_OK;
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColor(int index, u32 rgb)
+esp_err_t  Freenove_ESP32_WS2812::random() {
+	for(int x = 0; x<ledCounts; x++) {
+		uint32_t c = Wheel(::random(UINT8_MAX));
+		setLedColorData(x, c);
+	}
+
+    return ESP_OK;
+}
+
+esp_err_t Freenove_ESP32_WS2812::setLedColor(int index, uint32_t  rgb)
 {
 	return setLedColor(index, rgb >> 16, rgb >> 8, rgb);
 }
 
-esp_err_t Freenove_ESP32_WS2812::setLedColor(int index, u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setLedColor(int index, uint8_t  r, uint8_t  g, uint8_t  b)
 {
 	setLedColorData(index, r, g, b);
 	return show();
 }
 
-esp_err_t Freenove_ESP32_WS2812::setAllLedsColorData(u32 rgb)
+esp_err_t Freenove_ESP32_WS2812::setAllLedsColorData(uint32_t  rgb)
 {
 	for (int i = 0; i < ledCounts; i++)
 	{
@@ -129,7 +147,7 @@ esp_err_t Freenove_ESP32_WS2812::setAllLedsColorData(u32 rgb)
 	return ESP_OK;
 }
 
-esp_err_t Freenove_ESP32_WS2812::setAllLedsColorData(u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setAllLedsColorData(uint8_t  r, uint8_t  g, uint8_t  b)
 {
 	for (int i = 0; i < ledCounts; i++)
 	{
@@ -138,14 +156,14 @@ esp_err_t Freenove_ESP32_WS2812::setAllLedsColorData(u8 r, u8 g, u8 b)
 	return ESP_OK;
 }
 
-esp_err_t Freenove_ESP32_WS2812::setAllLedsColor(u32 rgb)
+esp_err_t Freenove_ESP32_WS2812::setAllLedsColor(uint32_t  rgb)
 {
 	setAllLedsColorData(rgb);
 	show();
 	return ESP_OK;
 }
 
-esp_err_t Freenove_ESP32_WS2812::setAllLedsColor(u8 r, u8 g, u8 b)
+esp_err_t Freenove_ESP32_WS2812::setAllLedsColor(uint8_t  r, uint8_t  g, uint8_t  b)
 {
 	setAllLedsColorData(r, g, b);
 	show();
@@ -159,7 +177,7 @@ esp_err_t Freenove_ESP32_WS2812::show()
 
 uint32_t Freenove_ESP32_WS2812::Wheel(byte pos)
 {
-	u32 WheelPos = pos % 0xff;
+	uint32_t  WheelPos = pos % 0xff;
 	if (WheelPos < 85) {
 		return ((255 - WheelPos * 3) << 16) | ((WheelPos * 3) << 8);
 	}
@@ -173,7 +191,7 @@ uint32_t Freenove_ESP32_WS2812::Wheel(byte pos)
 
 uint32_t Freenove_ESP32_WS2812::hsv2rgb(uint32_t h, uint32_t s, uint32_t v)
 {
-	u8 r, g, b;
+	uint8_t  r, g, b;
 	h %= 360; // h -> [0,360]
 	uint32_t rgb_max = v * 2.55f;
 	uint32_t rgb_min = rgb_max * (100 - s) / 100.0f;
