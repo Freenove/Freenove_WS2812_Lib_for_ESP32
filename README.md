@@ -1,7 +1,10 @@
 # Freenove WS2812 Lib for ESP32
 
 ## Description
-This is an Arduino library for controlling ws2812b led on esp32.
+This is an Arduino library for controlling ws2812b led on esp32. 
+Please note that our library supports ESP32 package versions up to 2.0.14.
+Beyond which an error will be reported. 
+Do not use unstable esp32 package versions.
 
 ## Examples:
 
