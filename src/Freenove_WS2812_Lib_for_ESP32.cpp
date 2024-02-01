@@ -69,6 +69,8 @@ bool Freenove_ESP32_WS2812::begin()
 void Freenove_ESP32_WS2812::setLedCount(uint16_t  n)
 {
 	ledCounts = n;
+	//Thanks for the optimizations from KarlErikMander
+	rmtDeinit(rmt_send); // Deinitialize the RMT channel before begin() initilizes RMT channel again.
 	begin();
 }
 
