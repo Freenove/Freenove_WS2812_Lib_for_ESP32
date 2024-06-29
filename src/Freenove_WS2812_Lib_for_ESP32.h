@@ -3,7 +3,7 @@
  * Brief	A library for controlling ws2812 in esp32 platform.
  * Author	ZhentaoLin
  * Company	Freenove
- * Date		2021-10-15
+ * Date		2024-02-29
  */
 
 #ifndef _FREENOVE_WS2812_LIB_FOR_ESP32_h
@@ -11,15 +11,22 @@
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include <Arduino.h>
+#else
+#include "WProgram.h"
 #endif
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include "Arduino.h"
-#include <stdint.h>
 
 #include "esp32-hal.h"
+
+//Modify the definition to expand the number of leds
+//Supports a maximum of 1100 leds
+#define NR_OF_LEDS   256  
+
+#define NR_OF_ALL_BITS 24*NR_OF_LEDS
 
 enum LED_TYPE
 {					  //R  G  B
@@ -46,18 +53,11 @@ protected:
 	
 	float realTick;
 	rmt_reserve_memsize_t rmt_mem;
-	rmt_data_t *led_data;
-	rmt_obj_t* rmt_send = NULL;
+	rmt_data_t led_data[NR_OF_ALL_BITS];
+	//rmt_obj_t* rmt_send = NULL;
 
 public:
-	Freenove_ESP32_WS2812(uint16_t n = 8, 
-	uint8_t pin_gpio = 2,
-	 uint8_t chn = 0,
-	  LED_TYPE t = TYPE_GRB);
-
-    ~Freenove_ESP32_WS2812();
-
-    esp_err_t  random();
+	Freenove_ESP32_WS2812(uint16_t n = 8, uint8_t pin_gpio = 2, uint8_t chn = 0, LED_TYPE t = TYPE_GRB);
 
 	bool begin();
 	void setLedCount(uint16_t n);
