@@ -122,6 +122,23 @@ esp_err_t Freenove_ESP32_WS2812::setLedColorData(int index, uint8_t r, uint8_t g
 	return set_pixel(index, p[0], p[1], p[2]);
 }
 
+esp_err_t Freenove_ESP32_WS2812::setLedColorAndBrightnessData(int index, uint32_t rgb,  uint8_t  brightness)
+{
+	return setLedColorAndBrightnessData(index, rgb >> 16, rgb >> 8, rgb, brightness);
+}
+
+esp_err_t Freenove_ESP32_WS2812::setLedColorAndBrightnessData(int index, uint8_t  r, uint8_t  g, uint8_t b,  uint8_t  brightness)
+{
+	brightness = constrain(brightness, 0, 255);
+
+	uint8_t  p[3];
+	p[rOffset] = r * brightness / 255;
+	p[gOffset] = g * brightness / 255;
+	p[bOffset] = b * brightness / 255;
+
+	return set_pixel(index, p[0], p[1], p[2]);
+}
+
 esp_err_t Freenove_ESP32_WS2812::set_pixel(int index, uint8_t r, uint8_t g, uint8_t b)
 {
 	uint32_t color = r << 16 | g << 8 | b ;

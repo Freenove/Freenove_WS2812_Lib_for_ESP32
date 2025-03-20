@@ -69,6 +69,9 @@ public:
 	esp_err_t setLedColorData(int index, uint32_t rgb);
 	esp_err_t setLedColorData(int index, uint8_t r, uint8_t g, uint8_t b);
 
+	esp_err_t setLedColorAndBrightnessData(int index, uint32_t rgb,  uint8_t  brightness);
+	esp_err_t setLedColorAndBrightnessData(int index, uint8_t  r, uint8_t  g, uint8_t,  uint8_t  brightness);
+
 	esp_err_t setLedColor(int index, uint32_t rgb);
 	esp_err_t setLedColor(int index, uint8_t r, uint8_t g, uint8_t b);
 
