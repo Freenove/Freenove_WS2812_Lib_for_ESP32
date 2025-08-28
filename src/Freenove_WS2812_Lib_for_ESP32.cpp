@@ -207,7 +207,7 @@ esp_err_t Freenove_ESP32_WS2812::show()
 	return rmtWrite(pin, led_data, ledCounts*24, RMT_WAIT_FOR_EVER);
 }
 
-uint32_t Freenove_ESP32_WS2812::Wheel(byte pos)
+uint32_t Freenove_ESP32_WS2812::Wheel(uint8_t pos)
 {
 	uint32_t WheelPos = pos % 0xff;
 	if (WheelPos < 85) {

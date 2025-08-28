@@ -18,7 +18,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
-#include "Arduino.h"
 
 #include "esp32-hal.h"
 
@@ -83,7 +82,7 @@ public:
 
 	esp_err_t show();
 
-	uint32_t Wheel(byte pos);
+	uint32_t Wheel(uint8_t pos);
 	uint32_t hsv2rgb(uint32_t h, uint32_t s, uint32_t v);
 };
 
