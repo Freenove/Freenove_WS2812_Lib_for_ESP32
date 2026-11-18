@@ -4,6 +4,11 @@
  * Author	ZhentaoLin
  * Company	Freenove
  * Date		2024-02-29
+ *
+ * Dual RMT backend:
+ *   - arduino-esp32 2.0.x (ESP-IDF 4.x): legacy rmtInit/rmtWrite/rmt_data_t
+ *   - arduino-esp32 3.x   (ESP-IDF 5.x): new rmt_new_tx_channel/rmt_bytes_encoder/rmt_transmit
+ * Selected automatically by ESP_IDF_VERSION_MAJOR. Public class API is identical on both.
  */
 
 #ifndef _FREENOVE_WS2812_LIB_FOR_ESP32_h
@@ -15,17 +20,20 @@
 #include "WProgram.h"
 #endif
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
+#include "esp_idf_version.h"
 
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+// ---- ESP-IDF 5.x: new RMT driver ----
+#include "esp_err.h"
+#include "driver/rmt_tx.h"
+#include "driver/rmt_encoder.h"
+#else
+// ---- ESP-IDF 4.x: legacy Arduino RMT wrapper ----
 #include "esp32-hal.h"
+#endif
 
-//Modify the definition to expand the number of leds
-//Supports a maximum of 1100 leds
-#define NR_OF_LEDS   256  
-
-#define NR_OF_ALL_BITS 24*NR_OF_LEDS
+// Pixel buffer is allocated dynamically to match the configured LED count
+// (set via the constructor's 'n' argument, default 8). No fixed maximum.
 
 enum LED_TYPE
 {					  //R  G  B
@@ -49,14 +57,22 @@ protected:
 	uint8_t rOffset;
 	uint8_t gOffset;
 	uint8_t bOffset;
-	
-	float realTick;
+
+	bool inited;
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+	// ---- ESP-IDF 5.x backend members ----
+	rmt_channel_handle_t rmt_chan;
+	rmt_encoder_handle_t rmt_enc;
+	uint8_t *pixels;        // dynamically sized: ledCounts * 3
+#else
+	// ---- ESP-IDF 4.x backend members ----
 	rmt_reserve_memsize_t rmt_mem;
-	rmt_data_t led_data[NR_OF_ALL_BITS];
-	//rmt_obj_t* rmt_send = NULL;
+	rmt_data_t *led_data;   // dynamically sized: ledCounts * 24
+#endif
 
 public:
 	Freenove_ESP32_WS2812(uint16_t n = 8, uint8_t pin_gpio = 2, uint8_t chn = 0, LED_TYPE t = TYPE_GRB);
+	~Freenove_ESP32_WS2812();
 
 	bool begin();
 	void setLedCount(uint16_t n);
@@ -69,7 +85,7 @@ public:
 	esp_err_t setLedColorData(int index, uint8_t r, uint8_t g, uint8_t b);
 
 	esp_err_t setLedColorAndBrightnessData(int index, uint32_t rgb,  uint8_t  brightness);
-	esp_err_t setLedColorAndBrightnessData(int index, uint8_t  r, uint8_t  g, uint8_t,  uint8_t  brightness);
+	esp_err_t setLedColorAndBrightnessData(int index, uint8_t  r, uint8_t  g, uint8_t b,  uint8_t  brightness);
 
 	esp_err_t setLedColor(int index, uint32_t rgb);
 	esp_err_t setLedColor(int index, uint8_t r, uint8_t g, uint8_t b);
@@ -87,4 +103,3 @@ public:
 };
 
 #endif
-
