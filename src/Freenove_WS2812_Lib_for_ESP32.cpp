@@ -6,6 +6,8 @@
  * Author	ZhentaoLin
  * Company	Freenove
  * Date		2024-02-29
+ *
+ * Dual RMT backend selected by ESP_IDF_VERSION_MAJOR (see header).
  */
 
 #include "Freenove_WS2812_Lib_for_ESP32.h"
@@ -15,14 +17,94 @@ Freenove_ESP32_WS2812::Freenove_ESP32_WS2812(uint16_t n /*= 8*/, uint8_t pin_gpi
 	ledCounts = n;
 	pin = pin_gpio;
 	rmt_chn = chn;
+	inited = false;
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+	rmt_chan = NULL;
+	rmt_enc = NULL;
+	pixels = NULL;
+#else
 	//rmt_mem = RMT_MEM_64;
 	rmt_mem = RMT_MEM_NUM_BLOCKS_1;
+	led_data = NULL;
+#endif
 	br = 255;
 	setLedType(t);
 }
 
+Freenove_ESP32_WS2812::~Freenove_ESP32_WS2812()
+{
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+	if (pixels != NULL)
+	{
+		free(pixels);
+		pixels = NULL;
+	}
+#else
+	if (led_data != NULL)
+	{
+		free(led_data);
+		led_data = NULL;
+	}
+#endif
+}
+
 bool Freenove_ESP32_WS2812::begin()
-{	
+{
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+	// ---------------- ESP-IDF 5.x: new RMT driver ----------------
+	// (Re)allocate the pixel buffer to the configured LED count.
+	uint8_t *new_pixels = (uint8_t *)calloc(ledCounts * 3, 1);
+	if (new_pixels == NULL)
+	{
+		return false;
+	}
+	free(pixels);
+	pixels = new_pixels;
+
+	if (inited)
+	{
+		return true;
+	}
+
+	// RMT TX channel driven at 10 MHz -> 1 tick = 100 ns.
+	rmt_tx_channel_config_t chan_cfg = {};
+	chan_cfg.gpio_num = (gpio_num_t)pin;
+	chan_cfg.clk_src = RMT_CLK_SRC_DEFAULT;
+	chan_cfg.resolution_hz = 10000000;
+	chan_cfg.mem_block_symbols = 64;
+	chan_cfg.trans_queue_depth = 4;
+	if (rmt_new_tx_channel(&chan_cfg, &rmt_chan) != ESP_OK)
+	{
+		return false;
+	}
+
+	// WS2812 bit encoding, MSB first:
+	//  bit0: 0.4us high + 0.8us low,  bit1: 0.8us high + 0.4us low.
+	rmt_bytes_encoder_config_t enc_cfg = {
+		.bit0 = {
+			.duration0 = 4, .level0 = 1,
+			.duration1 = 8, .level1 = 0,
+		},
+		.bit1 = {
+			.duration0 = 8, .level0 = 1,
+			.duration1 = 4, .level1 = 0,
+		},
+		.flags = { .msb_first = 1 },
+	};
+	if (rmt_new_bytes_encoder(&enc_cfg, &rmt_enc) != ESP_OK)
+	{
+		return false;
+	}
+
+	if (rmt_enable(rmt_chan) != ESP_OK)
+	{
+		return false;
+	}
+
+	inited = true;
+	return true;
+#else
+	// ---------------- ESP-IDF 4.x: legacy Arduino RMT wrapper ----------------
 	switch(rmt_chn){
 		case 0:
 			//rmt_mem=RMT_MEM_64;break;
@@ -76,6 +158,17 @@ bool Freenove_ESP32_WS2812::begin()
 	if(rmtInit(pin, RMT_TX_MODE, rmt_mem, 10000000)==false){
 		return false;
 	}
+	// (Re)allocate the symbol buffer to the configured LED count.
+	if (led_data != NULL)
+	{
+		free(led_data);
+		led_data = NULL;
+	}
+	led_data = (rmt_data_t *)calloc(ledCounts * 24, sizeof(rmt_data_t));
+	if (led_data == NULL)
+	{
+		return false;
+	}
 	for(int i=0;i<ledCounts;i++)
 	{
 		for (int bit = 0; bit < 24; bit++) {
@@ -86,14 +179,36 @@ bool Freenove_ESP32_WS2812::begin()
 		}
 	}
 	//realTick = rmtSetTick(rmt_send, 100);
+	inited = true;
 	return true;
+#endif
 }
 
 void Freenove_ESP32_WS2812::setLedCount(uint16_t n)
 {
+	if (n == ledCounts)
+	{
+		return;
+	}
 	ledCounts = n;
-	//rmtDeinit(rmt_send); // Deinitialize the RMT channel before begin() initilizes RMT channel again.
-	begin();
+
+	if (!inited)
+	{
+		// Not set up yet: let begin() create the RMT resources and allocate the buffer.
+		begin();
+		return;
+	}
+
+	// Already initialized: release the old buffer, then re-allocate to the new count.
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+	free(pixels);
+	pixels = NULL;
+	pixels = (uint8_t *)calloc(ledCounts * 3, 1);
+#else
+	free(led_data);
+	led_data = NULL;
+	led_data = (rmt_data_t *)calloc(ledCounts * 24, sizeof(rmt_data_t));
+#endif
 }
 
 void Freenove_ESP32_WS2812::setLedType(LED_TYPE t)
@@ -141,6 +256,24 @@ esp_err_t Freenove_ESP32_WS2812::setLedColorAndBrightnessData(int index, uint8_t
 
 esp_err_t Freenove_ESP32_WS2812::set_pixel(int index, uint8_t r, uint8_t g, uint8_t b)
 {
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+	if (pixels == NULL)
+	{
+		return ESP_ERR_NO_MEM;
+	}
+	if (index < 0 || index >= (int)ledCounts)
+	{
+		return ESP_ERR_INVALID_ARG;
+	}
+	pixels[index * 3 + 0] = r;
+	pixels[index * 3 + 1] = g;
+	pixels[index * 3 + 2] = b;
+	return ESP_OK;
+#else
+	if (led_data == NULL)
+	{
+		return ESP_ERR_NO_MEM;
+	}
 	uint32_t color = r << 16 | g << 8 | b ;
 	for (int bit = 0; bit < 24; bit++) {
 		if (color & (1 << (23-bit))) {
@@ -156,6 +289,7 @@ esp_err_t Freenove_ESP32_WS2812::set_pixel(int index, uint8_t r, uint8_t g, uint
 		}
 	}
 	return ESP_OK;
+#endif
 }
 
 esp_err_t Freenove_ESP32_WS2812::setLedColor(int index, uint32_t rgb)
@@ -203,8 +337,31 @@ esp_err_t Freenove_ESP32_WS2812::setAllLedsColor(uint8_t r, uint8_t g, uint8_t b
 
 esp_err_t Freenove_ESP32_WS2812::show()
 {
+#if defined(ESP_IDF_VERSION_MAJOR) && (ESP_IDF_VERSION_MAJOR >= 5)
+	if (!inited)
+	{
+		return ESP_ERR_INVALID_STATE;
+	}
+	if (pixels == NULL)
+	{
+		return ESP_ERR_NO_MEM;
+	}
+	rmt_transmit_config_t tx_cfg = {};
+	tx_cfg.loop_count = 0;
+	esp_err_t err = rmt_transmit(rmt_chan, rmt_enc, pixels, (size_t)ledCounts * 3, &tx_cfg);
+	if (err != ESP_OK)
+	{
+		return err;
+	}
+	return rmt_tx_wait_all_done(rmt_chan, -1);
+#else
+	if (led_data == NULL)
+	{
+		return ESP_ERR_NO_MEM;
+	}
 	//return rmtWrite(rmt_send, led_data, ledCounts*24);
 	return rmtWrite(pin, led_data, ledCounts*24, RMT_WAIT_FOR_EVER);
+#endif
 }
 
 uint32_t Freenove_ESP32_WS2812::Wheel(uint8_t pos)
